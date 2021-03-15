@@ -1,4 +1,4 @@
-# Yet another Gerrit Bot which help me wasting less time!
+# Yet another Gerrit Bot to help me stop wasting time!
 
 ** NOTE **
 

@@ -29,12 +29,6 @@ def gerrit_cmd(mode,
                 cmd += " --{}".format(arg)
         cmd += " --current-patch-set {} --format={}".format(ps, format)
 
-    # TODO:
-    #       Check the options:
-    #       1. --rebase
-    #       2. --code-review (it should be 0 by default, hardcoded!)
-    #       3. --message '"recheck"'
-    #       4. the patchset should point to the latest change <PS>,<change:int>
     elif mode == "review":
         cmd += ' {},{}'.format(ps, psnum)
         if args is not None:
@@ -62,6 +56,7 @@ def allowed(current, args):
 
 def run_gerrit_cmd(gerrit_conf,
                    mode,
+                   review,
                    num=None,
                    args=None,
                    **kwargs):
@@ -73,7 +68,7 @@ def run_gerrit_cmd(gerrit_conf,
     key = paramiko.RSAKey(filename=(os.path.expanduser(gerrit_conf['user']['key'])))
 
     # generate the gerrit command to run against the defined PS
-    cmd = gerrit_cmd(mode, gerrit_conf['watch_ps'], num, args, **kwargs)
+    cmd = gerrit_cmd(mode, review, num, args, **kwargs)
 
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -98,8 +93,8 @@ def run_gerrit_cmd(gerrit_conf,
     return payload
 
 
-def load_latest_available_data(conf):
-    data = run_gerrit_cmd(config.gerrit_config, 'query')
+def load_latest_available_data(conf, review):
+    data = run_gerrit_cmd(config.gerrit_config, 'query', review)
     return data[0]
 
 
@@ -122,36 +117,47 @@ def _show_summary(data):
 
     # TODO: Append the links of the logs in a table field
     status = PrettyTable(["Name", "Status"])
-    for approval in s['currentPatchSet']['approvals']:
-        status.add_row([approval['by']['name'], approval['value']])
-    print(status)
+    if s['currentPatchSet'].get('approvals', None) is None:  # CI is currently running!
+        print("STATUS: The patch is currently running on CI")
+    else:
+        for approval in s['currentPatchSet']['approvals']:
+            status.add_row([approval['by']['name'], approval['value']])
+        print(status)
 
 
-def _recheck(conf, psnum, args, **kwargs):
-    #out = run_gerrit_cmd(config.gerrit_config, 'review', num, ['rebase'], **{'message':'recheck', 'code-review': 0})
-    #out = run_gerrit_cmd(config.gerrit_config, 'review', **{'message':'recheck', 'code-review': 0})
+def _rebase(conf, review, psnum, args, **kwargs):
+
+    # out = run_gerrit_cmd(config.gerrit_config, 'review', num, ['rebase'], **{'message':'recheck', 'code-review': 0})
     out = run_gerrit_cmd(conf,
                          'review',
+                         review,
                          psnum,
                          args,
                          **kwargs)
-    return out
+    if "fatal" in out[0]:  # Cannot rebase, just recheck for now
+        return False
+    return True
 
+def _recheck(conf, review, psnum, args=None, **kwargs):
+
+    # out = run_gerrit_cmd(config.gerrit_config, 'review', **{'message':'recheck', 'code-review': 0})
+    run_gerrit_cmd(conf,
+                   'review',
+                   review,
+                   psnum,
+                   **kwargs)
+    return True
 
 
 if __name__ == '__main__':
 
+    review = config.gerrit_config['watch_ps']
 
     # READING
-    d = load_latest_available_data(config.gerrit_config)
+    d = load_latest_available_data(config.gerrit_config, review)
     num = _get_latest_ps(d)
     _show_summary(d)
 
-    # The following is within get_latest_available_data
-    # out = run_gerrit_cmd(config.gerrit_config, 'query', ['comments'])
-    # out = run_gerrit_cmd(config.gerrit_config, 'query')
-
-
     # WRITING
-    out = _recheck(config.gerrit_config, num, ['rebase'], **{'message': 'recheck', 'code-review': 0})
-    _show_summary(out)
+    if not _rebase(config.gerrit_config, review, num, ['rebase']):
+        _recheck(config.gerrit_config, review, num, **{'message': 'recheck', 'code-review': 0})

@@ -134,6 +134,13 @@ def _rebase(conf, review, psnum, args, **kwargs):
                          psnum,
                          args,
                          **kwargs)
+
+    if len(out) == 0:
+        '''
+        rebase succeeded, an empty array is
+        returned, no more actions to perform
+        '''
+        return True
     if "fatal" in out[0]:  # Cannot rebase, just recheck for now
         return False
     return True

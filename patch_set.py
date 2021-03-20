@@ -5,7 +5,9 @@ import paramiko
 import json
 import config
 import keyring
+from datetime import datetime
 import os
+import re
 
 
 GERRIT_BASE_CMD = "gerrit"
@@ -69,7 +71,6 @@ def run_gerrit_cmd(gerrit_conf,
 
     # generate the gerrit command to run against the defined PS
     cmd = gerrit_cmd(mode, review, num, args, **kwargs)
-
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.load_system_host_keys()
@@ -94,14 +95,8 @@ def run_gerrit_cmd(gerrit_conf,
 
 
 def load_latest_available_data(conf, review):
-    data = run_gerrit_cmd(config.gerrit_config, 'query', review)
+    data = run_gerrit_cmd(config.gerrit_config, 'query', review, None, ['comments'])
     return data[0]
-
-
-def _get_latest_ps(data):
-    if data is not None:
-        d = json.loads(data)
-        return d['currentPatchSet']['number']
 
 
 def _show_summary(data):
@@ -110,20 +105,35 @@ def _show_summary(data):
     of the current patch
     '''
     s = json.loads(data)
-    print("--------SUMMARY-------")
-    print("PROJECT: %s" % s['project'])
-    print("CURRENT PS: %d " % s['currentPatchSet']['number'])
-    print("LAST ACTION: %s " % s['currentPatchSet']['kind'])
+    summary = PrettyTable(["Project", "Current PS", "Last Action"])
+    summary.add_row([s['project'], s['currentPatchSet']['number'], s['currentPatchSet']['kind']])
 
-    # TODO: Append the links of the logs in a table field
     status = PrettyTable(["Name", "Status"])
     if s['currentPatchSet'].get('approvals', None) is None:  # CI is currently running!
-        print("STATUS: The patch is currently running on CI")
+        return ("In Progress",h"STATUS: The patch is currently running on CI")
     else:
         for approval in s['currentPatchSet']['approvals']:
             status.add_row([approval['by']['name'], approval['value']])
-        print(status)
+    return (summary, status)
 
+def _unpack(log):
+    s = ""
+    for name, link in log.items():
+        s += '- {} {}\n'.format(name, link)
+    return s
+
+def _show_ci_logs(retrieved_data):
+    summary = PrettyTable(["Date/Time", "Reviewer", "Logs"])
+    for elem in retrieved_data:
+        # print"TIME: %s " % list(elem.keys())[0][0])
+        # print("REVIEWER: %s " % list(elem.keys())[0][1])
+        s = ""
+        for k, log in elem.items():
+            s = _unpack(log)
+        # print(s)
+        summary.add_row([datetime.fromtimestamp(list(elem.keys())[0][0]), list(elem.keys())[0][1], s])
+
+    return summary
 
 def _rebase(conf, review, psnum, args, **kwargs):
 
@@ -134,13 +144,14 @@ def _rebase(conf, review, psnum, args, **kwargs):
                          psnum,
                          args,
                          **kwargs)
-
     if len(out) == 0:
         '''
         rebase succeeded, an empty array is
         returned, no more actions to perform
         '''
         return True
+
+    print(out)
     if "fatal" in out[0]:  # Cannot rebase, just recheck for now
         return False
     return True
@@ -155,16 +166,79 @@ def _recheck(conf, review, psnum, args=None, **kwargs):
                    **kwargs)
     return True
 
+def _show_ci_comment_list(comments):
+    for k in list(comments.keys()):
+        print('{}, {}'.format(k[0],k[1]))
+
+def _get_job(k, v, depth):
+    _jobs = {}
+    indent_level = 0 # just check the first level
+    line = re.compile(r'( *)- ([^\n]+)(?:: ([^\n]*))?\n?')
+    indent_level = 0 # just check the first level
+    for indent, job, other in line.findall(v[depth].strip()):
+        indent = len(indent)
+        if indent > indent_level:
+            raise Exception("unexpected indent")
+        # print("TOKEN NAME DETECTED: %s" % job.split(" ")[0])
+        k = job.split(" ")[0]
+        # print("TOKEN VALUE DETECTED %s" % job.split(" ")[1])
+        v = job.split(" ")[1]
+        _jobs[k] = v
+    return _jobs
+
+
+def _get_ci_logs(filtered, data, depth):
+    k = list(filtered.keys())
+    v = list(filtered.values())
+
+    jobs = []
+    for index in reversed(range(depth, 0)):
+        j = _get_job(k, v, index)
+        jobs.append({k[int(index)]: j})
+    return jobs
+
+
+def process_data(gerrit_conf, data):
+    s = json.loads(data)
+    allowed = gerrit_conf['allowed_ci']
+    latest_ps = s['currentPatchSet']['number']
+    filtered = {}
+    #print("%s, %s" % (comment['timestamp'], comment['reviewer']['name']))  # debug
+
+    # let's filter according to the allowed CI(s)
+    for comment in s['comments']:
+        if comment['reviewer']['name'] in allowed:
+            filtered[(comment['timestamp'], comment['reviewer']['name'])] = comment['message']
+
+    # _show_ci_comment_list(filtered)
+    depth = -2
+    jb = _get_ci_logs(filtered, data, depth)
+
+    # print(jb) # debug statement
+    return latest_ps, jb
+
 
 if __name__ == '__main__':
 
     review = config.gerrit_config['watch_ps']
+    comments = []
+    psnum = 0
 
     # READING
     d = load_latest_available_data(config.gerrit_config, review)
-    num = _get_latest_ps(d)
-    _show_summary(d)
+    psnum, comments = process_data(config.gerrit_config, d)
+    summary, status = _show_summary(d)
+    logs = _show_ci_logs(comments)
+
+    print(summary)
+    print(status)
+    print(logs)
+
+    # TODO:
+    # 1. wrap some printf into proper logging
+    # 2. turn script definition into OO
 
     # WRITING
-    if not _rebase(config.gerrit_config, review, num, ['rebase']):
-        _recheck(config.gerrit_config, review, num, **{'message': 'recheck', 'code-review': 0})
+    #if not _rebase(config.gerrit_config, review, num, ['rebase']):
+    #    _recheck(config.gerrit_config, review, num, **{'message': 'recheck', 'code-review': 0})
+    #    print("RECHECK?")

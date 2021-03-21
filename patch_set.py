@@ -134,7 +134,7 @@ def _show_ci_logs(retrieved_data):
     summary = PrettyTable(["Date/Time", "Reviewer", "Logs"])
     for elem in retrieved_data:
 
-        log.debug("TIME: %s \nREVIEWER: %s\n" % (list(elem.keys())[0][0],  list(elem.keys())[0][1]))
+        log.debug("TIME: %s \nREVIEWER: %s\n" % (list(elem.keys())[0][0], list(elem.keys())[0][1]))
 
         s = ""
         for k, lg in elem.items():
@@ -182,14 +182,14 @@ def _recheck(conf, review, psnum, args=None, **kwargs):
 
 def _show_ci_comment_list(comments):
     for k in list(comments.keys()):
-        print('{}, {}'.format(k[0],k[1]))
+        print('{}, {}'.format(k[0], k[1]))
 
 
 def _get_job(k, v, depth):
     _jobs = {}
-    indent_level = 0 # just check the first level
+    indent_level = 0  # just check the first level
     line = re.compile(r'( *)- ([^\n]+)(?:: ([^\n]*))?\n?')
-    indent_level = 0 # just check the first level
+    indent_level = 0  # just check the first level
     for indent, job, other in line.findall(v[depth].strip()):
         indent = len(indent)
         if indent > indent_level:
@@ -205,15 +205,15 @@ def _get_ci_logs(filtered, data, depth):
     k = list(filtered.keys())
     v = list(filtered.values())
 
-    log.debug("%s, %s" %(k[-2]))
-    log.debug("%s, %s" %(k[-1], v[-1].strip()))
+    log.debug("%s, %s" % (k[-2]))
+    log.debug("%s, %s" % (k[-1], v[-1].strip()))
 
     jobs = []
     for index in reversed(range(depth, 0)):
         j = _get_job(k, v, index)
-        jobs.append({k[int(index)]:j})
+        jobs.append({k[int(index)]: j})
     return jobs
-    
+
 
 def process_data(gerrit_conf, data):
     s = json.loads(data)
@@ -232,32 +232,34 @@ def process_data(gerrit_conf, data):
     depth = -2
     jb = _get_ci_logs(filtered, data, depth)
 
-    log.debug(jb) # log the resulting jobs
+    log.debug(jb)  # log the resulting jobs
     return latest_ps, jb
 
 
 if __name__ == '__main__':
 
-    review = config.gerrit_config['watch_ps']
+    reviews = config.gerrit_config['watch_ps']
     comments = []
     psnum = 0
 
-    # READING
-    d = load_latest_available_data(config.gerrit_config, review)
-    psnum, comments = process_data(config.gerrit_config, d)
-    summary, status = _show_summary(d)
-    logs = _show_ci_logs(comments)
+    assert isinstance(reviews, list)
 
-    print(summary)
-    print(status)
-    print(logs)
+    for r in reviews:
+        # READING
+        d = load_latest_available_data(config.gerrit_config, r)
+        psnum, comments = process_data(config.gerrit_config, d)
+        summary, status = _show_summary(d)
+        logs = _show_ci_logs(comments)
+
+        print(summary)
+        print(status)
+        print(logs)
 
 
-     # TODO:
-     # 2. turn script definition into OO
-     # 3. support for > than 1 review (this helps to check both containers and rpm(s) pending bits reviews
+        # TODO:
+        #   1. turn script definition into OO
 
-    # WRITING
-    #if not _rebase(config.gerrit_config, review, num, ['rebase']):
-    #    _recheck(config.gerrit_config, review, num, **{'message': 'recheck', 'code-review': 0})
-    #    print("RECHECK?")
+        # WRITING
+        #if not _rebase(config.gerrit_config, review, num, ['rebase']):
+        #    _recheck(config.gerrit_config, review, num, **{'message': 'recheck', 'code-review': 0})
+        #    print("RECHECK?")

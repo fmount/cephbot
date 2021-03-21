@@ -4,7 +4,11 @@ gerrit_config = {
     'instance': 'review.openstack.org',
     'port': '29418',
     'mode': 'ssh',
-    'watch_ps': '778915',
+    'watch_ps': [
+        '778915',
+        '780794',
+        '781069'
+    ],
     'user': {
         'name': 'cephbot',
         'psw': 'None',

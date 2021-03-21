@@ -5,12 +5,18 @@ import paramiko
 import json
 import config
 import keyring
+import logging
 from datetime import datetime
 import os
 import re
 
 
 GERRIT_BASE_CMD = "gerrit"
+LOG_PATH = "/tmp/gerrit_cmds.log"
+
+# logging should be moved into the wrapping class
+logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 def gerrit_cmd(mode,
                ps,
@@ -110,11 +116,12 @@ def _show_summary(data):
 
     status = PrettyTable(["Name", "Status"])
     if s['currentPatchSet'].get('approvals', None) is None:  # CI is currently running!
-        return ("In Progress",h"STATUS: The patch is currently running on CI")
+        print("STATUS: The patch is currently running on CI")
     else:
         for approval in s['currentPatchSet']['approvals']:
             status.add_row([approval['by']['name'], approval['value']])
     return (summary, status)
+
 
 def _unpack(log):
     s = ""
@@ -122,18 +129,23 @@ def _unpack(log):
         s += '- {} {}\n'.format(name, link)
     return s
 
+
 def _show_ci_logs(retrieved_data):
     summary = PrettyTable(["Date/Time", "Reviewer", "Logs"])
     for elem in retrieved_data:
-        # print"TIME: %s " % list(elem.keys())[0][0])
-        # print("REVIEWER: %s " % list(elem.keys())[0][1])
+
+        log.debug("TIME: %s \nREVIEWER: %s\n" % (list(elem.keys())[0][0],  list(elem.keys())[0][1]))
+
         s = ""
-        for k, log in elem.items():
-            s = _unpack(log)
-        # print(s)
+        for k, lg in elem.items():
+            s = _unpack(lg)
+
+        log.debug(s)
+
         summary.add_row([datetime.fromtimestamp(list(elem.keys())[0][0]), list(elem.keys())[0][1], s])
 
     return summary
+
 
 def _rebase(conf, review, psnum, args, **kwargs):
 
@@ -156,6 +168,7 @@ def _rebase(conf, review, psnum, args, **kwargs):
         return False
     return True
 
+
 def _recheck(conf, review, psnum, args=None, **kwargs):
 
     # out = run_gerrit_cmd(config.gerrit_config, 'review', **{'message':'recheck', 'code-review': 0})
@@ -166,9 +179,11 @@ def _recheck(conf, review, psnum, args=None, **kwargs):
                    **kwargs)
     return True
 
+
 def _show_ci_comment_list(comments):
     for k in list(comments.keys()):
         print('{}, {}'.format(k[0],k[1]))
+
 
 def _get_job(k, v, depth):
     _jobs = {}
@@ -179,9 +194,8 @@ def _get_job(k, v, depth):
         indent = len(indent)
         if indent > indent_level:
             raise Exception("unexpected indent")
-        # print("TOKEN NAME DETECTED: %s" % job.split(" ")[0])
         k = job.split(" ")[0]
-        # print("TOKEN VALUE DETECTED %s" % job.split(" ")[1])
+        log.debug("TOKEN NAME DETECTED: %s\nTOKEN VALUE DETECTED %s" % (job.split(" ")[0], job.split(" ")[1]))
         v = job.split(" ")[1]
         _jobs[k] = v
     return _jobs
@@ -191,30 +205,34 @@ def _get_ci_logs(filtered, data, depth):
     k = list(filtered.keys())
     v = list(filtered.values())
 
+    log.debug("%s, %s" %(k[-2]))
+    log.debug("%s, %s" %(k[-1], v[-1].strip()))
+
     jobs = []
     for index in reversed(range(depth, 0)):
         j = _get_job(k, v, index)
-        jobs.append({k[int(index)]: j})
+        jobs.append({k[int(index)]:j})
     return jobs
-
+    
 
 def process_data(gerrit_conf, data):
     s = json.loads(data)
     allowed = gerrit_conf['allowed_ci']
     latest_ps = s['currentPatchSet']['number']
     filtered = {}
-    #print("%s, %s" % (comment['timestamp'], comment['reviewer']['name']))  # debug
+
 
     # let's filter according to the allowed CI(s)
-    for comment in s['comments']:
+    for comment in s.get('comments', {}):
         if comment['reviewer']['name'] in allowed:
             filtered[(comment['timestamp'], comment['reviewer']['name'])] = comment['message']
 
+            log.debug("%s, %s" % (comment['timestamp'], comment['reviewer']['name']))
     # _show_ci_comment_list(filtered)
     depth = -2
     jb = _get_ci_logs(filtered, data, depth)
 
-    # print(jb) # debug statement
+    log.debug(jb) # log the resulting jobs
     return latest_ps, jb
 
 
@@ -234,9 +252,10 @@ if __name__ == '__main__':
     print(status)
     print(logs)
 
-    # TODO:
-    # 1. wrap some printf into proper logging
-    # 2. turn script definition into OO
+
+     # TODO:
+     # 2. turn script definition into OO
+     # 3. support for > than 1 review (this helps to check both containers and rpm(s) pending bits reviews
 
     # WRITING
     #if not _rebase(config.gerrit_config, review, num, ['rebase']):

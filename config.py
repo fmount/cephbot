@@ -4,10 +4,28 @@ gerrit_config = {
     'instance': 'review.openstack.org',
     'port': '29418',
     'mode': 'ssh',
-    'watch_ps': [
-        '778915',
-        '780794',
-        '781069'
+    'submissions': {
+        '778915': {
+            'actions': [
+                'watch',
+                'rebase',
+                'recheck'
+            ]
+        },
+        '780794': {
+            'actions': [
+                'watch'
+            ]
+        },
+        '781069': {
+            'actions': [
+                'watch'
+            ]
+        }
+    },
+    'allowed_ci': [
+        'Zuul',
+        'RDO Third Party CI'
     ],
     'user': {
         'name': 'cephbot',

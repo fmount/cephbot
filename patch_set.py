@@ -238,13 +238,13 @@ def process_data(gerrit_conf, data):
 
 if __name__ == '__main__':
 
-    reviews = config.gerrit_config['watch_ps']
+    reviews = config.gerrit_config['submissions']
     comments = []
     psnum = 0
 
-    assert isinstance(reviews, list)
+    assert isinstance(reviews, dict)
 
-    for r in reviews:
+    for r in list(reviews.keys()):
         # READING
         d = load_latest_available_data(config.gerrit_config, r)
         psnum, comments = process_data(config.gerrit_config, d)

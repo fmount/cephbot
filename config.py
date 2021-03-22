@@ -33,3 +33,15 @@ gerrit_config = {
         'key': '<path_of_the_cephbot_private_key>'
     }
 }
+
+irc = {
+    'server': 'foo',
+    'port': '6667',
+    'nick': 'cephbot',
+    "pass": "",
+    'channels': [
+        '#ch1',
+        '#ch2',
+    ],
+    'log': 'cephbot.log'
+}

@@ -19,6 +19,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
             psw: str,
             channel: list,
             log_path: str,
+            interact_with: list,
             port=6667):
 
         super(CephBot, self).__init__(
@@ -74,28 +75,57 @@ class CephBot(irc.bot.SingleServerIRCBot):
         nick = e.source.split('!')[0]
         args = e.arguments[0][1:]  # removing the '+' at the beginning
 
-        words = args.split()
-
-        if len(words) < 1:
-            self.log.debug("Ignoring privmsg from %s with no content" % nick)
-
-        cmd = words[0].lower()
-        if cmd.startswith('#') or cmd.startswith('+') or cmd.startswith('!'):
-            cmd = words[0].lower()[1:]
-
-        # here we can start processing private commands
-        # TODO:
-        # 1. only specific nicks (identified by the network) should be able
-        #    to process commands
-        print("Processing and executing %s" % cmd)
+        self._handle_msg(args, nick)
 
     def on_pubmsg(self, c, e):
-        # e.target, e.source, e.arguments, e.type
-        print("Public")
-        print(e.arguments)
+        if not self.identify_msg_cap:
+            self.log.debug("Ignoring msg from a not well identified user")
+            return
 
-    def _whoami(self) -> str:
+        nick = e.source.split('!')[0]
+        args = e.arguments[0][1:]  # removing the '+' at the beginning
+        chan = e.target
+
+        self._handle_msg(args, nick, chan)
+
+    def _handle_msg(self,
+            msg: str,
+            nick: str,
+            chan=None):
+        '''
+        Process a generic message, sent on a pub channel or as privmsg.
+        '''
+        if len(msg.split()) < 1:
+            self.log.debug("Ignoring msg from %s because no content is provided" % nick)
+        w = msg.lower()
+        if w.startswith('#') or w.startswith('+') or w.startswith('!'):
+            w = msg.lower()[1:]
+
+        print("Processing and executing %s" % w)
+        return
+
+    def whoami(self) -> str:
         return 'o/ I\'m %s' % (self.nick)
+
+    def _is_chanop(self, nick, chan):
+        return self.channels[chan].is_oper(nick)
+
+    def _is_voiced(self, nick, chan):
+        if chan is not None:
+            return (self.channels[chan].is_voiced(nick) or \
+                    self.channels[chan].is_oper(nick))
+
+    def allowed(current, ALLOWED_LIST):
+        if ALLOWED_LIST is None or len(ALLOWED_LIST) < 1:
+            '''
+            No members are present in the allowed_list,
+            hence anyone can run read-only commands against it
+            (e.g. the status of a review can be seen)
+            '''
+            return False
+        if current in ALLOWED_LIST:
+            return True
+        return False
 
 
 if __name__ == '__main__':
@@ -105,5 +135,6 @@ if __name__ == '__main__':
             config.irc.get('psw', ''),
             config.irc.get('channels', []),
             config.irc.get('log', 'cephbot.log'),
+            config.irc.get('allowed_nicks', ''),
             config.irc.get('port', 0))
     bot.start()

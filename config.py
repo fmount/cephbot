@@ -35,13 +35,18 @@ gerrit_config = {
 }
 
 irc = {
-    'server': 'foo',
+    'server': 'chat.freenode.net',
     'port': '6667',
     'nick': 'cephbot',
-    "pass": "",
+    "pass": "cephbot",
     'channels': [
-        '#ch1',
-        '#ch2',
+        '#tripleo-ceph',
     ],
-    'log': 'cephbot.log'
+    'allowed_nicks': [
+        'fmount'
+    ],
+    'log': 'cephbot.log',
+    'callback': [
+        'hello',
+    ]
 }

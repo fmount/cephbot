@@ -5,6 +5,7 @@ import daemon
 import sys
 import os
 import logging
+import callback
 import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -75,7 +76,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
         nick = e.source.split('!')[0]
         args = e.arguments[0][1:]  # removing the '+' at the beginning
 
-        self._handle_msg(args, nick)
+        c.privmsg(nick, self._handle_msg(args, nick))
 
     def on_pubmsg(self, c, e):
         if not self.identify_msg_cap:
@@ -101,11 +102,17 @@ class CephBot(irc.bot.SingleServerIRCBot):
         if w.startswith('#') or w.startswith('+') or w.startswith('!'):
             w = msg.lower()[1:]
 
-        print("Processing and executing %s" % w)
-        return
+        # if it's a pubmsg, make sure it can be processes only if the nick
+        # is +v and +o
 
-    def whoami(self) -> str:
-        return 'o/ I\'m %s' % (self.nick)
+        #if chan is not None and self._is_voiced(nick, chan)):
+        #    print("Processing and executing %s" % w)
+
+        print("Processing and executing %s" % w)
+        if hasattr(callback, w):
+            cb = getattr(callback, w)
+            return cb(self.nick)
+        return
 
     def _is_chanop(self, nick, chan):
         return self.channels[chan].is_oper(nick)

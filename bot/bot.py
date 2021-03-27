@@ -108,11 +108,19 @@ class CephBot(irc.bot.SingleServerIRCBot):
         #if chan is not None and self._is_voiced(nick, chan)):
         #    print("Processing and executing %s" % w)
 
-        print("Processing and executing %s" % w)
-        if hasattr(callback, w):
-            cb = getattr(callback, w)
+        self.log.debug("Processing and executing %s" % w)
+        # TODO:
+        # 1. tokenize words
+        # 2. if it's a valid command, check if it's allowed
+        # 3. call the proper callback
+        if hasattr(callback, 'on_{}'.format(w)):
+            cb = getattr(callback, 'on_{}'.format(w))
             return cb(self.nick)
-        return
+        return self._usage(callback)
+
+    def _usage(self, callback):
+        self.log.debug(dir(callback))
+        return "Sorry, I'm not able to understand that command! :("
 
     def _is_chanop(self, nick, chan):
         return self.channels[chan].is_oper(nick)

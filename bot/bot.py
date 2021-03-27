@@ -120,7 +120,13 @@ class CephBot(irc.bot.SingleServerIRCBot):
 
     def _usage(self, callback):
         self.log.debug(dir(callback))
-        return "Sorry, I'm not able to understand that command! :("
+        available_functions = []
+        for f in dir(callback):
+            if f.startswith('on_'):
+                available_functions.append('{}'.format(f))
+        self.log.debug(''.join(available_functions))
+        return ("Sorry, I'm not able to understand that command! "
+                "Run '!help' to see the full list of available commands :(")
 
     def _is_chanop(self, nick, chan):
         return self.channels[chan].is_oper(nick)

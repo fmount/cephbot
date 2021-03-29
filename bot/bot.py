@@ -124,8 +124,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
             if hasattr(callback, 'on_{}'.format(w)):
                 cb = getattr(callback, 'on_{}'.format(w))
                 return cb(**kw)
-            return self._usage()
-        return ''
+        return self._usage()
 
     def _usage(self):
         return ("Sorry, I'm not able to understand that command! "

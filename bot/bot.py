@@ -87,7 +87,8 @@ class CephBot(irc.bot.SingleServerIRCBot):
         args = e.arguments[0][1:]  # removing the '+' at the beginning
         chan = e.target
 
-        self._handle_msg(args, nick, chan)
+        self.log.debug("Replying on chan: %s" % chan)
+        c.privmsg(chan, self._handle_msg(args, nick, chan))
 
     def _handle_msg(self,
             msg: str,
@@ -102,29 +103,31 @@ class CephBot(irc.bot.SingleServerIRCBot):
         if w.startswith('#') or w.startswith('+') or w.startswith('!'):
             w = msg.lower()[1:]
 
-        # if it's a pubmsg, make sure it can be processes only if the nick
-        # is +v and +o
+            # if it's a pubmsg, make sure it can be processes only if the nick
+            # is +v and +o
 
-        #if chan is not None and self._is_voiced(nick, chan)):
-        #    print("Processing and executing %s" % w)
+            #if chan is not None and self._is_voiced(nick, chan)):
+            #    print("Processing and executing %s" % w)
 
-        self.log.debug("Processing and executing %s" % w)
-        # TODO:
-        # 1. tokenize words
-        # 2. if it's a valid command, check if it's allowed
-        # 3. call the proper callback
-        if hasattr(callback, 'on_{}'.format(w)):
-            cb = getattr(callback, 'on_{}'.format(w))
-            return cb(self.nick)
-        return self._usage(callback)
+            self.log.debug("Processing and executing %s" % w)
 
-    def _usage(self, callback):
-        self.log.debug(dir(callback))
-        available_functions = []
-        for f in dir(callback):
-            if f.startswith('on_'):
-                available_functions.append('{}'.format(f))
-        self.log.debug(''.join(available_functions))
+            kw = {
+                'callback': callback,
+                'nick': self.nick,
+                'chan': chan
+            }
+
+            # TODO:
+            # 1. tokenize words
+            # 2. if it's a valid command, check if it's allowed
+            # 3. call the proper callback
+            if hasattr(callback, 'on_{}'.format(w)):
+                cb = getattr(callback, 'on_{}'.format(w))
+                return cb(**kw)
+            return self._usage()
+        return ''
+
+    def _usage(self):
         return ("Sorry, I'm not able to understand that command! "
                 "Run '!help' to see the full list of available commands :(")
 

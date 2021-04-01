@@ -4,6 +4,7 @@ import irc.bot
 import daemon
 import sys
 import os
+import re
 import logging
 import callback
 import time
@@ -109,7 +110,13 @@ class CephBot(irc.bot.SingleServerIRCBot):
             #if chan is not None and self._is_voiced(nick, chan)):
             #    print("Processing and executing %s" % w)
 
+            # normalize words, removing all that fun human symbols
+            wds = re.sub(r'[?|$|.|!|,|>|<]', r'', wds).strip()
+
             w = wds.split()
+
+            self.log.debug("(Normalized) tokens: %s" % w)
+
             if len(w) < 1:
                 return self._usage()
 

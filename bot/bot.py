@@ -99,9 +99,9 @@ class CephBot(irc.bot.SingleServerIRCBot):
         '''
         if len(msg.split()) < 1:
             self.log.debug("Ignoring msg from %s because no content is provided" % nick)
-        w = msg.lower()
-        if w.startswith('#') or w.startswith('+') or w.startswith('!'):
-            w = msg.lower()[1:]
+        wds = msg.lower()
+        if wds.startswith('#') or wds.startswith('+') or wds.startswith('!'):
+            wds = msg.lower()[1:]
 
             # if it's a pubmsg, make sure it can be processes only if the nick
             # is +v and +o
@@ -109,25 +109,40 @@ class CephBot(irc.bot.SingleServerIRCBot):
             #if chan is not None and self._is_voiced(nick, chan)):
             #    print("Processing and executing %s" % w)
 
-            self.log.debug("Processing and executing %s" % w)
+            w = wds.split()
+            if len(w) < 1:
+                return self._usage()
+
+            self.log.debug("Processing and executing %s" % w[0])
 
             kw = {
                 'callback': callback,
                 'nick': self.nick,
-                'chan': chan
+                'chan': chan,
+                'args': w[1:]
             }
 
-            # TODO:
-            # 1. tokenize words
-            # 2. if it's a valid command, check if it's allowed
-            # 3. call the proper callback
-            if hasattr(callback, 'on_{}'.format(w)):
-                cb = getattr(callback, 'on_{}'.format(w))
+            '''
+            Check if it's a valid command and is allowed, then
+            call the proper registered callback (using the on_
+            prefix).
+            '''
+            if(hasattr(callback, 'on_{}'.format(w[0])) and \
+               self._is_command_allowed(w[0])):
+                cb = getattr(callback, 'on_{}'.format(w[0]))
                 return cb(**kw)
         return self._usage()
 
+    def _is_command_allowed(self, cmd):
+        '''
+        Only process commands explicitly allowed in the config
+        area.
+        '''
+        return True if cmd in config.irc.get('callback', []) else False
+
     def _usage(self):
-        return ("Sorry, I'm not able to understand that command! "
+        return ("Sorry, I'm not able to understand that command or you're "
+                "just not allowed to run it! "
                 "Run '!help' to see the full list of available commands :(")
 
     def _is_chanop(self, nick, chan):
@@ -137,18 +152,6 @@ class CephBot(irc.bot.SingleServerIRCBot):
         if chan is not None:
             return (self.channels[chan].is_voiced(nick) or \
                     self.channels[chan].is_oper(nick))
-
-    def allowed(current, ALLOWED_LIST):
-        if ALLOWED_LIST is None or len(ALLOWED_LIST) < 1:
-            '''
-            No members are present in the allowed_list,
-            hence anyone can run read-only commands against it
-            (e.g. the status of a review can be seen)
-            '''
-            return False
-        if current in ALLOWED_LIST:
-            return True
-        return False
 
 
 if __name__ == '__main__':

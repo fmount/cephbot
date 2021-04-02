@@ -7,11 +7,20 @@ import os
 import re
 import logging
 import callback
+import textwrap
 import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import config  # noqa E402
 
+
+# When a msg is split, we should sleep a specific amount of time before
+# sending the next part. Freenode allows an higher rate, but this sleep
+# time should be enough.
+MESSAGE_CONTINUATION_SLEEP = 0.5
+
+# Sleep time between sent messages
+ANTI_FLOOD_SLEEP = 2
 
 class CephBot(irc.bot.SingleServerIRCBot):
     def __init__(
@@ -77,7 +86,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
         nick = e.source.split('!')[0]
         args = e.arguments[0][1:]  # removing the '+' at the beginning
 
-        c.privmsg(nick, self._handle_msg(args, nick))
+        self.send_wrapped_msg(c, nick, (self._handle_msg(args, nick)))
 
     def on_pubmsg(self, c, e):
         if not self.identify_msg_cap:
@@ -89,7 +98,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
         chan = e.target
 
         self.log.debug("Replying on chan: %s" % chan)
-        c.privmsg(chan, self._handle_msg(args, nick, chan))
+        self.send_wrapped_msg(c, chan, (self._handle_msg(args, nick)))
 
     def _handle_msg(self,
             msg: str,
@@ -111,7 +120,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
             #    print("Processing and executing %s" % w)
 
             # normalize words, removing all that fun human symbols
-            wds = re.sub(r'[?|$|.|!|,|>|<]', r'', wds).strip()
+            wds = re.sub(r'[?|$|.|!|,|>|<|\]|\[|\{|\}|\/|\\|]', r'', wds).strip()
 
             w = wds.split()
 
@@ -159,6 +168,18 @@ class CephBot(irc.bot.SingleServerIRCBot):
         if chan is not None:
             return (self.channels[chan].is_voiced(nick) or \
                     self.channels[chan].is_oper(nick))
+
+    def send_wrapped_msg(self, c, chan, msg):
+        for chunks in msg.split('\n'):
+            # 400 chars should be safe
+            chunks = textwrap.wrap(chunks, 400)
+            if len(chunks) > 10:
+                raise Exception("Unusually large message: %s" % (msg,))
+            for count, chunk in enumerate(chunks):
+                c.privmsg(chan, chunk)
+            if count:
+                time.sleep(MESSAGE_CONTINUATION_SLEEP)
+        time.sleep(ANTI_FLOOD_SLEEP)
 
 
 if __name__ == '__main__':

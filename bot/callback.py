@@ -57,10 +57,10 @@ def on_gerrit(**kwargs) -> str:
 
     # a switch - case statement looking for the proper ps function
     if args[0] == "status":
-        _, status = ps._show_summary(d)
+        _, status = ps._show_summary(d, True)
         return (str(status))
     elif args[0] == "summary":
-        summary, _ = ps._show_summary(d)
+        summary, _ = ps._show_summary(d, True)
         return (str(summary))
     elif args[0] == "logs":
         psnum, comments = ps.process_data(config.gerrit_config, d)

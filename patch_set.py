@@ -105,22 +105,33 @@ def load_latest_available_data(conf, review):
     return data[0]
 
 
-def _show_summary(data):
+def _show_summary(data, raw=True):
     '''
     Print a summary related to the last execution
     of the current patch
     '''
     s = json.loads(data)
-    summary = PrettyTable(["Project", "Current PS", "Last Action"])
-    summary.add_row([s['project'], s['currentPatchSet']['number'], s['currentPatchSet']['kind']])
+    if not raw:
+        summary = PrettyTable(["Project", "Current PS", "Last Action"])
+        summary.add_row([s['project'], s['currentPatchSet']['number'], s['currentPatchSet']['kind']])
 
-    status = PrettyTable(["Name", "Status"])
-    if s['currentPatchSet'].get('approvals', None) is None:  # CI is currently running!
-        print("STATUS: The patch is currently running on CI")
+        status = PrettyTable(["Name", "Status"])
+        if s['currentPatchSet'].get('approvals', None) is None:  # CI is currently running!
+            print("STATUS: The patch is currently running on CI")
+        else:
+            for approval in s['currentPatchSet']['approvals']:
+                status.add_row([approval['by']['name'], approval['value']])
+        return (summary, status)
     else:
-        for approval in s['currentPatchSet']['approvals']:
-            status.add_row([approval['by']['name'], approval['value']])
-    return (summary, status)
+        summary = 'Project: {} \nCurrent PatchSet: {} \nLast action: {}'.format(s['project'], \
+                    s['currentPatchSet']['number'], s['currentPatchSet']['kind'])
+        status = []
+        if s['currentPatchSet'].get('approvals', None) is None:  # CI is currently running!
+            status.append("STATUS: The patch is currently running on CI")
+        else:
+            for approval in s['currentPatchSet']['approvals']:
+                status.append('{}: {}\n'.format(approval['by']['name'], approval['value']))
+        return (summary, ''.join(status))
 
 
 def _unpack(log):
@@ -130,21 +141,32 @@ def _unpack(log):
     return s
 
 
-def _show_ci_logs(retrieved_data):
-    summary = PrettyTable(["Date/Time", "Reviewer", "Logs"])
-    for elem in retrieved_data:
+def _show_ci_logs(retrieved_data, raw=True):
+    if not raw:
+        summary = PrettyTable(["Date/Time", "Reviewer", "Logs"])
+        for elem in retrieved_data:
+            log.debug("TIME: %s \nREVIEWER: %s\n" % (list(elem.keys())[0][0], list(elem.keys())[0][1]))
+            s = ""
+            for k, lg in elem.items():
+                s = _unpack(lg)
+            log.debug(s)
+            summary.add_row([datetime.fromtimestamp(list(elem.keys())[0][0]), list(elem.keys())[0][1], s])
+        return summary
+    else:
+        ls = []
+        # for each tuple (time, reviewer) get the relevant logs
+        for elem in retrieved_data:
+            # The tuple (time, reviewer) is the new key
+            log.debug("(%s - %s\n)" % (list(elem.keys())[0][0], list(elem.keys())[0][1]))
+            s = ""
+            #cur_header = (list(elem.keys())[0][0], list(elem.keys())[0][1])
+            ls.append('{}\n'.format(list(elem.keys())[0][1]))
+            for k, lg in elem.items():
+                s = _unpack(lg)
+                ls.append(s)
+            #ls[cur_header] = s
+        return(''.join(ls))
 
-        log.debug("TIME: %s \nREVIEWER: %s\n" % (list(elem.keys())[0][0], list(elem.keys())[0][1]))
-
-        s = ""
-        for k, lg in elem.items():
-            s = _unpack(lg)
-
-        log.debug(s)
-
-        summary.add_row([datetime.fromtimestamp(list(elem.keys())[0][0]), list(elem.keys())[0][1], s])
-
-    return summary
 
 
 def _rebase(conf, review, psnum, args, **kwargs):

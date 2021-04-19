@@ -148,7 +148,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
                     self._is_allowed(nick, 'allowed_nicks')):
                 cb = getattr(callback, 'on_{}'.format(w[0]))
                 return cb(**kw)
-        return self._usage()
+        return
 
     def _is_allowed(self, elem, key):
         '''

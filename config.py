@@ -40,7 +40,7 @@ irc = {
     'nick': 'cephbot',
     "pass": "cephbot",
     'channels': [
-        '#tripleo-ceph',
+        '#tripleo-ceph2',
     ],
     'allowed_nicks': [
         'fmount'
@@ -48,5 +48,9 @@ irc = {
     'log': 'cephbot.log',
     'callback': [
         'hello',
+        'help',
+        'gerrit',
+        'guess',
+        'squad'
     ]
 }

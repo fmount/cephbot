@@ -154,8 +154,8 @@ class CephBot(irc.bot.SingleServerIRCBot):
         '''
         Only process commands explicitly allowed in the config
         area, if the nick is allowed to do that!
-        :elem is the item that can be or cannot be found in the list
-        :key is the key of the dict returning the list where the item can be found
+        :param elem is the item that can be or cannot be found in the list
+        :param key is the key of the dict returning the list where the item can be found
         '''
         return True if elem in config.irc.get(key, []) else False
 
@@ -176,6 +176,7 @@ class CephBot(irc.bot.SingleServerIRCBot):
         for chunks in msg.split('\n'):
             # 400 chars should be safe
             chunks = textwrap.wrap(chunks, 400)
+            count = 0
             if len(chunks) > 10:
                 raise Exception("Unusually large message: %s" % (msg,))
             for count, chunk in enumerate(chunks):

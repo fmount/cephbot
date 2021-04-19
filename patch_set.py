@@ -224,6 +224,9 @@ def _get_job(k, v, depth):
 
 
 def _get_ci_logs(filtered, data, depth):
+    if len(filtered) == 0:
+        return []
+
     k = list(filtered.keys())
     v = list(filtered.values())
 

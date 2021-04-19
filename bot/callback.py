@@ -66,9 +66,11 @@ def on_gerrit(**kwargs) -> str:
     elif args[0] == "logs":
         psnum, comments = ps.process_data(config.gerrit_config, d)
         logs = ps._show_ci_logs(comments)
+        if len(logs) == 0:
+            return ("I'm not able to find any relevant log atm!")
         return str(logs)
     else:
-        return("I barely understand what gerrit is, I don't remember a command like the "
+        return ("I barely understand what gerrit is, I don't remember a command like the "
                "one you run! (rebase and recheck are not yet available)")
 
 def on_squad(**kwargs) -> str:
@@ -87,9 +89,9 @@ def on_squad(**kwargs) -> str:
     # process arguments
     args = kwargs.get('args', [])
     if not args or len(args) < 1:
-        return("Please follow this syntax: \n"
-               "!squad <command> \n"
-               "Available squad functions are: %s" % (', '.join(subcmds)))
+        return ("Please follow this syntax: \n"
+                "!squad <command> \n"
+                "Available squad functions are: %s" % (', '.join(subcmds)))
 
     # a switch - case statement looking for the proper subcommand
     if args[0] == "status":
@@ -111,15 +113,15 @@ def on_guess(**kwargs) -> str:
 
     args = kwargs.get('args', [])
     if not args or len(args) < 1:
-        return("Please follow this syntax: \n"
-               "!guess <integer> \n")
+        return ("Please follow this syntax: \n"
+                "!guess <integer> \n")
 
     number = random.randint(1, 50)
 
     try:
         guess = int(args[0])
         if guess == number:
-            return("You did it!")
-        return("You're not so lucky today, try again! (my number was %d)" % number)
+            return ("You did it!")
+        return ("You're not so lucky today, try again! (my number was %d)" % number)
     except ValueError:
-        return("Please enter an integer")
+        return ("Please enter an integer")

@@ -2,6 +2,7 @@
 
 import sys
 import itertools
+import random
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -69,3 +70,56 @@ def on_gerrit(**kwargs) -> str:
     else:
         return("I barely understand what gerrit is, I don't remember a command like the "
                "one you run!")
+
+def on_squad(**kwargs) -> str:
+    '''
+    This command can be processed if provided with the following
+    syntax:
+
+    !squad <command>
+
+    There are a few available sub-commands:
+
+    * status
+    '''
+    squad_etherpad = 'https://etherpad.openstack.org/p/tripleo-integration-squad-status'
+    subcmds = ['status']
+    # process arguments
+    args = kwargs.get('args', [])
+    if not args or len(args) < 1:
+        return("Please follow this syntax: \n"
+               "!squad <command> \n"
+               "Available squad functions are: %s" % (', '.join(subcmds)))
+
+    # a switch - case statement looking for the proper subcommand
+    if args[0] == "status":
+        return ('The Ceph Squad status can be found here: {}'.format(str(squad_etherpad)))
+    else:
+        return ("Command not valid, please provide one of the available commands [ %s ]" % (' '.join(subcmds)))
+
+def on_guess(**kwargs) -> str:
+    '''
+    This command is just implemented to have some fun with this bot.
+    It represents a quick version of the "guess the number" game.
+    syntax:
+
+    !guess <number>
+
+    an int must be passed and will be evaluated within the function.
+    '''
+
+
+    args = kwargs.get('args', [])
+    if not args or len(args) < 1:
+        return("Please follow this syntax: \n"
+               "!guess <integer> \n")
+
+    number = random.randint(1, 50)
+
+    try:
+        guess = int(args[0])
+        if guess == number:
+            return("You did it!")
+        return("You're not so lucky today, try again! (my number was %d)" % number)
+    except ValueError:
+        return("Please enter an integer")

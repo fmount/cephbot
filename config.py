@@ -31,7 +31,8 @@ gerrit_config = {
         'name': 'cephbot',
         'psw': 'None',
         'key': '<path_of_the_cephbot_private_key>'
-    }
+    },
+    'pending_ceph': '778915'
 }
 
 irc = {

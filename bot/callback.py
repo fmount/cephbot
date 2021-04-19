@@ -47,11 +47,16 @@ def on_gerrit(**kwargs) -> str:
     if not args or len(args) < 2:
         return("Please follow this syntax: \n"
                "!gerrit <command> <submission_id> \n"
+               "or ....\n"
+               "just run '!gerrit status pending_ceph' to see the last CI execution status \n"
                "Available gerrit functions are: %s" % (', '.join(list(itertools.chain(c_read, c_write)))))
 
     if args[0] in c_read:
         try:
-            review = int(args[1])
+            if 'pending_ceph' in args[1]:
+                review = int(config.gerrit_config['pending_ceph'])
+            else:
+                review = int(args[1])
         except ValueError:
             return "The submission_id is wrong, it's not an int!"
         d = ps.load_latest_available_data(config.gerrit_config, review)

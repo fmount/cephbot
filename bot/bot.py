@@ -176,12 +176,10 @@ class CephBot(irc.bot.SingleServerIRCBot):
         for chunks in msg.split('\n'):
             # 400 chars should be safe
             chunks = textwrap.wrap(chunks, 400)
-            count = 0
             if len(chunks) > 10:
                 raise Exception("Unusually large message: %s" % (msg,))
-            for count, chunk in enumerate(chunks):
+            for _, chunk in enumerate(chunks):
                 c.privmsg(chan, chunk)
-            if count:
                 time.sleep(MESSAGE_CONTINUATION_SLEEP)
         time.sleep(ANTI_FLOOD_SLEEP)
 

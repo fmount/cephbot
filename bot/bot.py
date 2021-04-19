@@ -144,17 +144,20 @@ class CephBot(irc.bot.SingleServerIRCBot):
             prefix).
             '''
             if(hasattr(callback, 'on_{}'.format(w[0])) and \
-               self._is_command_allowed(w[0])):
+                    self._is_allowed(w[0], 'callback') and \
+                    self._is_allowed(nick, 'allowed_nicks')):
                 cb = getattr(callback, 'on_{}'.format(w[0]))
                 return cb(**kw)
         return self._usage()
 
-    def _is_command_allowed(self, cmd):
+    def _is_allowed(self, elem, key):
         '''
         Only process commands explicitly allowed in the config
-        area.
+        area, if the nick is allowed to do that!
+        :elem is the item that can be or cannot be found in the list
+        :key is the key of the dict returning the list where the item can be found
         '''
-        return True if cmd in config.irc.get('callback', []) else False
+        return True if elem in config.irc.get(key, []) else False
 
     def _usage(self):
         return ("Sorry, I'm not able to understand that command or you're "

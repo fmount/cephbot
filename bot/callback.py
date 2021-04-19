@@ -69,7 +69,7 @@ def on_gerrit(**kwargs) -> str:
         return str(logs)
     else:
         return("I barely understand what gerrit is, I don't remember a command like the "
-               "one you run!")
+               "one you run! (rebase and recheck are not yet available)")
 
 def on_squad(**kwargs) -> str:
     '''

@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import config  # noqa E402
-import patch_set as ps  # noqa E402
+from lib import patch_set as ps  # noqa E402
 
 def on_hello(**kwargs) -> str:
     nick = kwargs.get('nick', 'cephbot')

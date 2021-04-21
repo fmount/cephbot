@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+gerrit_config = {
+    'instance': '<gerrit_instance>',
+    'port': '<gerrit_port>',
+    'mode': 'ssh',
+    'submissions': {
+        '<submission_id>': {
+            'actions': [
+                'watch',
+                'rebase',
+                'recheck'
+            ]
+        }
+    },
+    'allowed_ci': [
+        '<CI_NAME>',
+        '<CI_NAME>'
+    ],
+    'user': {
+        'name': '<gerrit_user>',
+        'psw': 'None',
+        'key': '<path_of_the_cephbot_private_key>'
+    },
+    'pending_ceph': '<pending_ceph_review>'
+}
+
+irc = {
+    'server': '<irc_instance>',
+    'port': '<irc_instance_port>',
+    'nick': '<irc_nick>',
+    "pass": "<irc_pass>",
+    'channels': [
+        '#chan1',
+        '#chan2',
+        '#chan3',
+    ],
+    'allowed_nicks': [
+        'fmount',
+        '<nick1>',
+        '<nick2>',
+        '<nick3>',
+    ],
+    'log': 'cephbot.log',
+    'callback': [
+        'hello',
+        'help',
+        '<callback1>',
+        '<callback2>',
+        '<callback3>',
+    ]
+}

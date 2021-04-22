@@ -142,6 +142,11 @@ All the libraries should go under $project/lib.
 
 ## TODO
 
-1. Improve the way the bot is run
-2. Include some packaging info
-3. Add some tox tests
+* [ ] Improve the way the bot is run
+* [ ] Include some packaging info
+* [ ] Add some tox tests
+
+##  License
+
+This project is released under the MIT license.
+
